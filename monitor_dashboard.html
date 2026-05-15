@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Monitor & Logs — Student Management API</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --surface2: #f1f0ec;
+    --border: rgba(0,0,0,0.10);
+    --border-md: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #9e9e9a;
+    --blue: #185FA5;
+    --blue-bg: #E6F1FB;
+    --blue-text: #0C447C;
+    --green: #0F6E56;
+    --green-bg: #E1F5EE;
+    --green-text: #085041;
+    --amber: #854F0B;
+    --amber-bg: #FAEEDA;
+    --amber-text: #633806;
+    --red: #A32D2D;
+    --red-bg: #FCEBEB;
+    --red-text: #501313;
+    --gray: #5F5E5A;
+    --gray-bg: #F1EFE8;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --mono: 'Courier New', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --surface: #242422;
+      --surface2: #2e2e2b;
+      --border: rgba(255,255,255,0.08);
+      --border-md: rgba(255,255,255,0.15);
+      --text: #f0efe9;
+      --text2: #a0a09a;
+      --text3: #6b6b67;
+      --blue-bg: #0c2a44;
+      --blue-text: #85B7EB;
+      --green-bg: #063325;
+      --green-text: #5DCAA5;
+      --amber-bg: #3d2505;
+      --amber-text: #FAC775;
+      --red-bg: #2e0f0f;
+      --red-text: #F09595;
+      --gray-bg: #2c2c2a;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
+
+  /* ── Top bar ── */
+  .top-bar {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px; gap: 12px; flex-wrap: wrap;
+  }
+  .top-bar h1 { font-size: 20px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .top-bar .sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .live-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--green-text); background: var(--green-bg);
+    padding: 4px 10px; border-radius: 20px; font-weight: 500;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    padding: 7px 14px; border-radius: var(--radius);
+    border: 0.5px solid var(--border-md);
+    background: var(--surface); color: var(--text);
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn i { font-size: 16px; }
+
+  /* ── Config bar ── */
+  .config-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 10px 14px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .config-bar label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .config-bar input[type="text"] {
+    flex: 1; min-width: 200px; font-size: 13px; padding: 6px 10px;
+    border-radius: var(--radius); border: 0.5px solid var(--border-md);
+    background: var(--surface2); color: var(--text);
+  }
+  .config-bar input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .btn-primary {
+    background: var(--blue); color: #fff; border-color: var(--blue);
+    font-size: 13px; font-weight: 500; padding: 7px 14px;
+    border-radius: var(--radius); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+
+  /* ── Metric cards ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 20px;
+  }
+  .metric {
+    background: var(--surface2); border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .metric .m-label {
+    font-size: 12px; color: var(--text2); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .metric .m-val { font-size: 26px; font-weight: 600; color: var(--text); }
+  .metric .m-sub { margin-top: 5px; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px;
+  }
+  .badge.ok    { background: var(--green-bg); color: var(--green-text); }
+  .badge.warn  { background: var(--amber-bg); color: var(--amber-text); }
+  .badge.err   { background: var(--red-bg);   color: var(--red-text); }
+  .badge.info  { background: var(--blue-bg);  color: var(--blue-text); }
+  .badge.muted { background: var(--gray-bg);  color: var(--gray); }
+
+  /* ── Section card ── */
+  .section {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; gap: 8px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .section-title i { font-size: 17px; color: var(--text2); }
+
+  /* ── Chart row ── */
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 700px) { .chart-row { grid-template-columns: 1fr; } }
+
+  /* ── Endpoint table ── */
+  .ep-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ep-table th {
+    text-align: left; font-weight: 500; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--text2);
+    padding: 6px 8px 8px; border-bottom: 0.5px solid var(--border);
+  }
+  .ep-table td {
+    padding: 9px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle;
+  }
+  .ep-table tr:last-child td { border-bottom: none; }
+  .ep-table tr:hover td { background: var(--surface2); }
+  .method-pill {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px; letter-spacing: .04em;
+  }
+  .m-GET    { background: var(--blue-bg);  color: var(--blue-text); }
+  .m-POST   { background: var(--green-bg); color: var(--green-text); }
+  .m-PUT    { background: var(--amber-bg); color: var(--amber-text); }
+  .m-DELETE { background: var(--red-bg);   color: var(--red-text); }
+  .bar-wrap { background: var(--surface2); border-radius: 20px; height: 5px; width: 80px; margin-top: 3px; }
+  .bar-fill { border-radius: 20px; height: 5px; background: var(--blue); }
+  .code { font-family: var(--mono); font-size: 12px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+  .dot-ok  { background: var(--green); }
+  .dot-err { background: var(--red); }
+
+  /* ── Log viewer ── */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-row select, .filter-row input[type="text"] {
+    font-size: 13px; padding: 6px 10px;
+    border-radius: var(--radius); border: 0.5px solid var(--border-md);
+    background: var(--surface2); color: var(--text);
+  }
+  .filter-row input[type="text"] { flex: 1; min-width: 160px; }
+  .filter-row select:focus, .filter-row input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .filter-row label { font-size: 12px; color: var(--text2); }
+
+  .log-area {
+    background: var(--surface2); border-radius: var(--radius);
+    padding: 10px 12px; max-height: 340px; overflow-y: auto;
+    font-family: var(--mono); font-size: 12px; line-height: 1.8;
+  }
+  .log-line {
+    display: flex; gap: 10px; padding: 3px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .log-line:last-child { border-bottom: none; }
+  .log-time  { color: var(--text3); white-space: nowrap; min-width: 148px; }
+  .log-level { min-width: 56px; font-weight: 700; }
+  .lv-INFO    { color: var(--blue); }
+  .lv-WARNING { color: var(--amber); }
+  .lv-ERROR   { color: var(--red); }
+  .lv-DEBUG   { color: var(--text3); }
+  .log-msg { color: var(--text); word-break: break-all; }
+  .log-empty { color: var(--text3); font-size: 13px; padding: 8px 0; }
+
+  /* ── Footer ── */
+  .footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text3); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div>
+      <h1><i class="ti ti-activity"></i> Monitor &amp; Logs</h1>
+      <div class="sub">Student Management API — real-time dashboard</div>
+    </div>
+    <div class="top-actions">
+      <span class="live-badge"><span class="live-dot"></span> Live</span>
+      <button class="btn" onclick="refresh()"><i class="ti ti-refresh"></i> Refresh</button>
+    </div>
+  </div>
+
+  <!-- API config -->
+  <div class="config-bar">
+    <label>API Base URL:</label>
+    <input type="text" id="base-url" value="http://localhost:8000" placeholder="http://localhost:8000" />
+    <button class="btn-primary" onclick="refresh()"><i class="ti ti-plug"></i> Connect</button>
+    <span id="conn-status"></span>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-server"></i> Status</div>
+      <div class="m-val" id="m-status">—</div>
+      <div class="m-sub" id="m-status-badge"></div>
+    </div>
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-activity"></i> Total requests</div>
+      <div class="m-val" id="m-reqs">—</div>
+      <div class="m-sub" id="m-reqs-sub"></div>
+    </div>
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-database"></i> Redis</div>
+      <div class="m-val" id="m-redis" style="font-size:15px;margin-top:6px">—</div>
+    </div>
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-file-text"></i> Log entries</div>
+      <div class="m-val" id="m-logs">—</div>
+      <div class="m-sub" id="m-logs-sub"></div>
+    </div>
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-alert-triangle"></i> Errors</div>
+      <div class="m-val" id="m-errors" style="color:var(--red)">—</div>
+      <div class="m-sub" id="m-err-badge"></div>
+    </div>
+    <div class="metric">
+      <div class="m-label"><i class="ti ti-clock"></i> Last updated</div>
+      <div class="m-val" id="m-time" style="font-size:14px;margin-top:4px">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-row">
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><i class="ti ti-chart-bar"></i> Requests per endpoint</div>
+      </div>
+      <div style="position:relative;height:220px">
+        <canvas id="endpointChart" role="img" aria-label="Horizontal bar chart of requests per endpoint">Endpoint hit counts.</canvas>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><i class="ti ti-chart-donut"></i> Log level breakdown</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12px" id="level-legend"></div>
+      <div style="position:relative;height:190px">
+        <canvas id="levelChart" role="img" aria-label="Donut chart of log levels">Log level distribution.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Endpoint table -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><i class="ti ti-table"></i> Endpoint stats</div>
+      <span id="ep-mode" class="badge muted" style="font-size:11px">demo data</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="ep-table">
+        <thead>
+          <tr>
+            <th>Endpoint</th>
+            <th>Method</th>
+            <th>Hits</th>
+            <th>Avg time</th>
+            <th>Share</th>
+            <th>Last status</th>
+          </tr>
+        </thead>
+        <tbody id="ep-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Log viewer -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title"><i class="ti ti-terminal-2"></i> Application logs</div>
+      <span id="log-count" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+    <div class="filter-row">
+      <label>Level:</label>
+      <select id="level-filter" onchange="renderLogs()">
+        <option value="">All</option>
+        <option value="INFO">INFO</option>
+        <option value="WARNING">WARNING</option>
+        <option value="ERROR">ERROR</option>
+        <option value="DEBUG">DEBUG</option>
+      </select>
+      <input type="text" id="log-search" placeholder="Search logs…" oninput="renderLogs()" />
+      <button class="btn" onclick="clearSearch()" style="padding:6px 10px;font-size:12px"><i class="ti ti-x"></i></button>
+      <button class="btn" onclick="scrollToBottom()" style="padding:6px 10px;font-size:12px"><i class="ti ti-arrow-down"></i> Latest</button>
+    </div>
+    <div class="log-area" id="log-area">
+      <div class="log-empty">Loading logs…</div>
+    </div>
+  </div>
+
+  <div class="footer">Student Management Pro — Monitor Dashboard &nbsp;·&nbsp; auto-refresh every 10s</div>
+</div>
+
+<script>
+// ── Data ────────────────────────────────────────────────────────────────────
+const ENDPOINTS_DEMO = [
+  {path:'/students',       method:'GET',    hits:214, avg:0.041, status:200},
+  {path:'/students/{id}',  method:'GET',    hits:138, avg:0.028, status:200},
+  {path:'/students',       method:'POST',   hits:54,  avg:0.062, status:201},
+  {path:'/students/{id}',  method:'PUT',    hits:29,  avg:0.055, status:200},
+  {path:'/students/{id}',  method:'DELETE', hits:11,  avg:0.033, status:200},
+  {path:'/auth/login',     method:'POST',   hits:187, avg:0.071, status:200},
+  {path:'/auth/register',  method:'POST',   hits:23,  avg:0.065, status:201},
+  {path:'/monitor/health', method:'GET',    hits:43,  avg:0.009, status:200},
+  {path:'/monitor/stats',  method:'GET',    hits:38,  avg:0.012, status:200},
+  {path:'/monitor/logs',   method:'GET',    hits:19,  avg:0.015, status:200},
+];
+
+const MOCK_LOGS = [
+  '2026-05-14 09:01:02 | INFO     | student_management | Connecting to MongoDB...',
+  '2026-05-14 09:01:03 | INFO     | student_management | MongoDB connected ✓',
+  '2026-05-14 09:01:03 | INFO     | student_management | DB indexes ensured ✓',
+  '2026-05-14 09:01:05 | INFO     | student_management | GET /students status=200 time=0.0391s',
+  '2026-05-14 09:01:07 | INFO     | student_management | POST /auth/login status=200 time=0.0712s',
+  '2026-05-14 09:01:09 | INFO     | student_management | GET /students/6644aab status=200 time=0.0281s',
+  '2026-05-14 09:01:13 | WARNING  | student_management | Redis ping failed, falling back to in-memory counter',
+  '2026-05-14 09:01:18 | INFO     | student_management | POST /students status=201 time=0.0621s',
+  '2026-05-14 09:01:21 | INFO     | student_management | GET /monitor/health status=200 time=0.0089s',
+  '2026-05-14 09:01:24 | ERROR    | student_management | GET /students/badid error=Invalid ObjectId time=0.0041s',
+  '2026-05-14 09:01:29 | INFO     | student_management | PUT /students/6644aab status=200 time=0.0554s',
+  '2026-05-14 09:01:34 | INFO     | student_management | GET /monitor/stats status=200 time=0.0121s',
+  '2026-05-14 09:01:48 | WARNING  | student_management | Slow query detected on /students time=0.301s',
+  '2026-05-14 09:01:52 | INFO     | student_management | DELETE /students/9922cc status=200 time=0.0334s',
+  '2026-05-14 09:01:57 | ERROR    | student_management | POST /auth/login error=Invalid credentials time=0.0521s',
+  '2026-05-14 09:02:01 | INFO     | student_management | GET /students status=200 time=0.0388s',
+  '2026-05-14 09:02:06 | INFO     | student_management | POST /students status=201 time=0.0595s',
+  '2026-05-14 09:02:10 | INFO     | student_management | GET /students/112233 status=200 time=0.0271s',
+  '2026-05-14 09:02:14 | DEBUG    | student_management | Cache hit for key students:page1',
+  '2026-05-14 09:02:19 | INFO     | student_management | GET /monitor/health status=200 time=0.0091s',
+  '2026-05-14 09:02:23 | INFO     | student_management | PUT /students/112233 status=200 time=0.0541s',
+  '2026-05-14 09:02:30 | INFO     | student_management | POST /auth/register status=201 time=0.0651s',
+  '2026-05-14 09:02:35 | DEBUG    | student_management | Cache miss for key students:page2',
+  '2026-05-14 09:02:39 | INFO     | student_management | GET /students status=200 time=0.0411s',
+];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allLogs = [];
+let endpointChart = null, levelChart = null;
+let isDemo = true;
+let autoTimer = null;
+
+// ── Log parsing ─────────────────────────────────────────────────────────────
+function parseLog(line) {
+  const m = line.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \| (\w+)\s+\| [\w_]+ \| (.+)$/);
+  if (!m) return { time: line.slice(0,19), level: 'INFO', msg: line };
+  return { time: m[1], level: m[2].trim(), msg: m[3] };
+}
+
+// ── Render logs ──────────────────────────────────────────────────────────────
+function renderLogs() {
+  const lvl = document.getElementById('level-filter').value;
+  const q   = document.getElementById('log-search').value.toLowerCase();
+  const filtered = allLogs.filter(l => {
+    if (lvl && l.level !== lvl) return false;
+    if (q && !l.msg.toLowerCase().includes(q) && !l.time.includes(q)) return false;
+    return true;
+  });
+  document.getElementById('log-count').textContent = filtered.length + ' entries';
+  const area = document.getElementById('log-area');
+  if (!filtered.length) {
+    area.innerHTML = '<div class="log-empty">No matching log entries.</div>';
+    return;
+  }
+  area.innerHTML = filtered.slice().reverse().map(l =>
+    `<div class="log-line">
+      <span class="log-time">${l.time}</span>
+      <span class="log-level lv-${l.level}">${l.level}</span>
+      <span class="log-msg">${escHtml(l.msg)}</span>
+    </div>`
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function clearSearch() {
+  document.getElementById('log-search').value = '';
+  document.getElementById('level-filter').value = '';
+  renderLogs();
+}
+function scrollToBottom() {
+  const area = document.getElementById('log-area');
+  area.scrollTop = area.scrollHeight;
+}
+
+// ── Endpoint chart ───────────────────────────────────────────────────────────
+function buildEndpointChart(data) {
+  const sorted = data.slice().sort((a,b) => b.hits - a.hits).slice(0,8);
+  const ctx = document.getElementById('endpointChart').getContext('2d');
+  if (endpointChart) endpointChart.destroy();
+  endpointChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e => e.method + ' ' + e.path),
+      datasets: [{
+        label: 'Requests',
+        data: sorted.map(e => e.hits),
+        backgroundColor: '#185FA5',
+        borderRadius: 4,
+        barThickness: 18,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { font: { size: 11 }, color: '#888' } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888', autoSkip: false } }
+      }
+    }
+  });
+}
+
+// ── Level chart ───────────────────────────────────────────────────────────────
+function buildLevelChart(counts) {
+  const vals   = [counts.INFO||0, counts.WARNING||0, counts.ERROR||0, counts.DEBUG||0];
+  const labels = ['INFO','WARNING','ERROR','DEBUG'];
+  const colors = ['#185FA5','#EF9F27','#E24B4A','#888780'];
+  const total  = vals.reduce((a,b) => a+b, 0);
+
+  // custom legend
+  document.getElementById('level-legend').innerHTML = labels.map((l,i) =>
+    `<span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2)">
+      <span style="width:10px;height:10px;border-radius:2px;background:${colors[i]};display:inline-block"></span>
+      ${l} ${total ? Math.round(vals[i]/total*100) : 0}%
+    </span>`
+  ).join('');
+
+  const ctx = document.getElementById('levelChart').getContext('2d');
+  if (levelChart) levelChart.destroy();
+  levelChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ── Endpoint table ────────────────────────────────────────────────────────────
+function buildEndpointTable(data) {
+  const total = data.reduce((s,e) => s+e.hits, 0);
+  const sorted = data.slice().sort((a,b) => b.hits - a.hits);
+  document.getElementById('ep-body').innerHTML = sorted.map(e => {
+    const pct = total ? Math.round(e.hits / total * 100) : 0;
+    const isOk = e.status < 400;
+    return `<tr>
+      <td class="code">${escHtml(e.path)}</td>
+      <td><span class="method-pill m-${e.method}">${e.method}</span></td>
+      <td>${e.hits.toLocaleString()}</td>
+      <td class="code">${e.avg.toFixed(3)}s</td>
+      <td>
+        <span style="font-size:11px;color:var(--text2)">${pct}%</span>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+      </td>
+      <td>
+        <span class="status-dot ${isOk ? 'dot-ok' : 'dot-err'}"></span>
+        <span class="code">${e.status}</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Now() helper ──────────────────────────────────────────────────────────────
+function nowStr() {
+  return new Date().toLocaleTimeString('en-GB');
+}
+
+// ── Main refresh ─────────────────────────────────────────────────────────────
+async function refresh() {
+  const base = document.getElementById('base-url').value.replace(/\/+$/, '');
+  document.getElementById('m-status').textContent = '…';
+
+  let health = null, stats = null, logsData = null;
+
+  try {
+    const r = await fetch(base + '/monitor/health');
+    health = await r.json();
+  } catch(_) {}
+
+  try {
+    const r = await fetch(base + '/monitor/stats');
+    stats = await r.json();
+  } catch(_) {}
+
+  try {
+    const r = await fetch(base + '/monitor/logs');
+    logsData = await r.json();
+  } catch(_) {}
+
+  const connected = !!(health || stats || logsData);
+  isDemo = !connected;
+
+  // connection status badge
+  document.getElementById('conn-status').innerHTML = connected
+    ? '<span class="badge ok"><i class="ti ti-check" style="font-size:11px"></i> Connected</span>'
+    : '<span class="badge warn"><i class="ti ti-wifi-off" style="font-size:11px"></i> Demo mode — API not reachable</span>';
+
+  // health
+  if (health) {
+    const ok = health.status === 'ok';
+    document.getElementById('m-status').textContent = ok ? 'OK' : health.status;
+    document.getElementById('m-status-badge').innerHTML =
+      `<span class="badge ${ok ? 'ok' : 'err'}">${ok ? '✓ Healthy' : 'Down'}</span>`;
+  } else {
+    document.getElementById('m-status').textContent = 'Demo';
+    document.getElementById('m-status-badge').innerHTML = '<span class="badge muted">simulated</span>';
+  }
+
+  // stats
+  const reqCount = stats ? stats.request_count : 714;
+  document.getElementById('m-reqs').textContent = reqCount.toLocaleString();
+  document.getElementById('m-reqs-sub').innerHTML = stats
+    ? '<span class="badge info">real data</span>'
+    : '<span class="badge muted">demo</span>';
+
+  if (stats) {
+    const rc = stats.redis;
+    document.getElementById('m-redis').innerHTML =
+      rc === 'connected'
+        ? '<span class="badge ok">✓ Connected</span>'
+        : `<span class="badge ${rc === 'error' ? 'err' : 'warn'}">${rc}</span>`;
+  } else {
+    document.getElementById('m-redis').innerHTML = '<span class="badge muted">unavailable</span>';
+  }
+
+  // logs
+  const rawLogs = (logsData && logsData.logs && logsData.logs.length) ? logsData.logs : MOCK_LOGS;
+  allLogs = rawLogs.map(parseLog);
+
+  const counts = { INFO:0, WARNING:0, ERROR:0, DEBUG:0 };
+  allLogs.forEach(l => { if (counts[l.level] !== undefined) counts[l.level]++; else counts.INFO++; });
+
+  document.getElementById('m-logs').textContent = allLogs.length;
+  document.getElementById('m-logs-sub').innerHTML = logsData
+    ? '<span class="badge info">real data</span>'
+    : '<span class="badge muted">demo</span>';
+
+  const errCount = counts.ERROR || 0;
+  document.getElementById('m-errors').textContent = errCount;
+  document.getElementById('m-err-badge').innerHTML =
+    errCount === 0
+      ? '<span class="badge ok">No errors</span>'
+      : `<span class="badge err">${errCount} error${errCount > 1 ? 's' : ''}</span>`;
+
+  document.getElementById('m-time').textContent = nowStr();
+
+  // charts & table
+  buildEndpointChart(ENDPOINTS_DEMO);
+  buildLevelChart(counts);
+  buildEndpointTable(ENDPOINTS_DEMO);
+  document.getElementById('ep-mode').textContent = 'demo data';
+  renderLogs();
+}
+
+// ── Simulated live log stream ─────────────────────────────────────────────────
+function simulateLiveLogs() {
+  const methods  = ['GET','POST','GET','GET','PUT','DELETE'];
+  const paths    = ['/students','/auth/login','/monitor/health','/students/123','/students/456','/monitor/stats'];
+  const levels   = ['INFO','INFO','INFO','INFO','INFO','WARNING','ERROR','DEBUG'];
+
+  setInterval(() => {
+    const lvl = levels[Math.floor(Math.random() * levels.length)];
+    const m   = methods[Math.floor(Math.random() * methods.length)];
+    const p   = paths[Math.floor(Math.random() * paths.length)];
+    const t   = (Math.random() * 0.1 + 0.008).toFixed(4);
+    const now = new Date().toISOString().replace('T',' ').slice(0,19);
+    let msg;
+    if (lvl === 'ERROR')   msg = `${m} ${p} error=Timeout time=${t}s`;
+    else if (lvl === 'WARNING') msg = `Slow query on ${p} time=${(parseFloat(t)+0.2).toFixed(3)}s`;
+    else if (lvl === 'DEBUG')   msg = `Cache ${Math.random()>0.5?'hit':'miss'} for key ${p.replace(/\//g,'')}:page1`;
+    else                        msg = `${m} ${p} status=200 time=${t}s`;
+
+    allLogs.push({ time: now, level: lvl, msg });
+    if (allLogs.length > 200) allLogs.shift();
+    document.getElementById('m-logs').textContent = allLogs.length;
+    document.getElementById('m-time').textContent = nowStr();
+    renderLogs();
+  }, 4000);
+}
+
+// ── Auto-refresh every 10s ────────────────────────────────────────────────────
+function startAutoRefresh() {
+  clearInterval(autoTimer);
+  autoTimer = setInterval(refresh, 10000);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+refresh();
+simulateLiveLogs();
+startAutoRefresh();
+</script>
+</body>
+</html>
